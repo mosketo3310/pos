@@ -153,7 +153,7 @@ export default function SalesPage() {
           bill={{
             saleId: billDone.saleId,
             shopName:billDone.shopName ,
-            items: billDone.items ,
+            items: billDone.items_summary ,
             total: billDone.total,
             payment_method: billDone.payment_method,
             received: billDone.received,
