@@ -152,7 +152,7 @@ export default function SalesPage() {
         <BillModal
           bill={{
             saleId: billDone.saleId,
-            shopName: session?.user?.name ?? 'ร้านค้า',
+            shopName:billDone.shopName ,
             items: billDone.items ?? [],
             total: billDone.total,
             payment_method: billDone.payment_method,
