@@ -2,6 +2,10 @@
 import { useEffect, useState } from 'react';
 import { useCartStore } from '@/lib/cartStore';
 import BillModal from '@/components/BillModal';
+import { useSession } from 'next-auth/react';
+
+// ใน SalesPage component เพิ่ม:
+const { data: session } = useSession();
 
 interface Product {
   id: number;
@@ -62,7 +66,7 @@ export default function SalesPage() {
       <BillModal
         bill={{
           saleId: billDone.saleId,
-          shopName: 'ร้านค้า',
+          shopName: billDone.shopName ,
           items: billDone.items ?? [],
           total: billDone.total,
           payment_method: billDone.payment_method,
