@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useCartStore } from '@/lib/cartStore';
+import BillModal from '@/components/BillModal';
 
 interface Product {
   id: number;
@@ -55,33 +56,24 @@ export default function SalesPage() {
 
   const change = payMethod === 'cash' && received ? Number(received) - total() : null;
 
-  if (billDone) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow p-8 w-full max-w-sm text-center">
-          <div className="text-4xl mb-3">✅</div>
-          <h2 className="text-xl font-medium text-teal-700 mb-1">ชำระเงินสำเร็จ</h2>
-          <p className="text-gray-400 text-sm mb-4">บิล #{billDone.saleId}</p>
-          <div className="bg-gray-50 rounded-xl p-4 text-left space-y-2 mb-6">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-500">ยอดรวม</span>
-              <span className="font-medium">฿{billDone.total.toLocaleString()}</span>
-            </div>
-            {billDone.change !== null && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">เงินทอน</span>
-                <span className="font-medium text-teal-600">฿{billDone.change.toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-          <button onClick={() => setBillDone(null)}
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-lg py-2 text-sm font-medium transition">
-            ขายต่อ
-          </button>
-        </div>
-      </div>
-    );
-  }
+ if (billDone) {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <BillModal
+        bill={{
+          saleId: billDone.saleId,
+          shopName: 'ร้านค้า',
+          items: billDone.items ?? [],
+          total: billDone.total,
+          payment_method: billDone.payment_method,
+          received: billDone.received,
+          change: billDone.change,
+        }}
+        onClose={() => setBillDone(null)}
+      />
+    </div>
+  );
+}
 
   /* ── Cart panel (shared between desktop sidebar & mobile drawer) ── */
   const CartPanel = () => (
