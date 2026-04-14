@@ -1,11 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useCartStore } from '@/lib/cartStore';
 import BillModal from '@/components/BillModal';
-import { useSession } from 'next-auth/react';
-
-// ใน SalesPage component เพิ่ม:
-const { data: session } = useSession();
 
 interface Product {
   id: number;
@@ -17,7 +14,95 @@ interface Product {
   image_url?: string | null;
 }
 
+interface CartPanelProps {
+  items: any[];
+  total: () => number;
+  payMethod: 'cash' | 'transfer';
+  setPayMethod: (m: 'cash' | 'transfer') => void;
+  received: string;
+  setReceived: (v: string) => void;
+  change: number | null;
+  handleCheckout: () => void;
+  loading: boolean;
+  clearCart: () => void;
+  removeItem: (id: number) => void;
+  updateQty: (id: number, qty: number) => void;
+}
+
+// ✅ ย้ายออกมานอก SalesPage เพื่อป้องกัน input reset
+function CartPanel({
+  items, total, payMethod, setPayMethod, received, setReceived,
+  change, handleCheckout, loading, clearCart, removeItem, updateQty,
+}: CartPanelProps) {
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {items.length === 0 && (
+          <p className="text-center text-gray-400 text-sm py-8">ยังไม่มีสินค้า</p>
+        )}
+        {items.map(item => (
+          <div key={item.product_id} className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{item.name}</p>
+              <p className="text-xs text-teal-600">฿{(item.price * item.qty).toLocaleString()}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <button onClick={() => updateQty(item.product_id, item.qty - 1)}
+                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm flex items-center justify-center">−</button>
+              <span className="text-sm w-6 text-center">{item.qty}</span>
+              <button onClick={() => updateQty(item.product_id, item.qty + 1)}
+                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm flex items-center justify-center">+</button>
+            </div>
+            <button onClick={() => removeItem(item.product_id)}
+              className="text-gray-300 hover:text-red-400 text-xl leading-none">×</button>
+          </div>
+        ))}
+      </div>
+
+      <div className="p-4 border-t border-gray-100 space-y-3">
+        <div className="flex justify-between text-sm font-medium">
+          <span>ยอดรวม</span>
+          <span className="text-teal-600 text-lg">฿{total().toLocaleString()}</span>
+        </div>
+        <div className="flex gap-2">
+          {(['cash', 'transfer'] as const).map(m => (
+            <button key={m} onClick={() => setPayMethod(m)}
+              className={`flex-1 py-2 rounded-lg text-sm border transition ${
+                payMethod === m ? 'bg-teal-600 text-white border-teal-600' : 'border-gray-200 text-gray-500 hover:border-teal-400'
+              }`}>
+              {m === 'cash' ? '💵 เงินสด' : '📲 โอนเงิน'}
+            </button>
+          ))}
+        </div>
+        {payMethod === 'cash' && (
+          <div>
+            <input
+              type="number"
+              placeholder="รับมา..."
+              value={received}
+              onChange={e => setReceived(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+            />
+            {change !== null && change >= 0 && <p className="text-sm text-teal-600 mt-1">เงินทอน ฿{change.toLocaleString()}</p>}
+            {change !== null && change < 0 && <p className="text-sm text-red-400 mt-1">รับมาไม่พอ</p>}
+          </div>
+        )}
+        <button
+          onClick={handleCheckout}
+          disabled={items.length === 0 || loading || (payMethod === 'cash' && change !== null && change < 0)}
+          className="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-3 font-medium transition disabled:opacity-40">
+          {loading ? 'กำลังบันทึก...' : 'ชำระเงิน'}
+        </button>
+        {items.length > 0 && (
+          <button onClick={clearCart} className="w-full text-sm text-gray-400 hover:text-red-400 transition">ล้างตะกร้า</button>
+        )}
+      </div>
+    </>
+  );
+}
+
 export default function SalesPage() {
+  const { data: session } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [payMethod, setPayMethod] = useState<'cash' | 'transfer'>('cash');
@@ -60,86 +145,32 @@ export default function SalesPage() {
 
   const change = payMethod === 'cash' && received ? Number(received) - total() : null;
 
- if (billDone) {
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <BillModal
-        bill={{
-          saleId: billDone.saleId,
-          shopName: billDone.shopName ,
-          items: billDone.items ?? [],
-          total: billDone.total,
-          payment_method: billDone.payment_method,
-          received: billDone.received,
-          change: billDone.change,
-        }}
-        onClose={() => setBillDone(null)}
-      />
-    </div>
-  );
-}
-
-  /* ── Cart panel (shared between desktop sidebar & mobile drawer) ── */
-  const CartPanel = () => (
-    <>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {items.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-8">ยังไม่มีสินค้า</p>
-        )}
-        {items.map(item => (
-          <div key={item.product_id} className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{item.name}</p>
-              <p className="text-xs text-teal-600">฿{(item.price * item.qty).toLocaleString()}</p>
-            </div>
-            <div className="flex items-center gap-1">
-              <button onClick={() => updateQty(item.product_id, item.qty - 1)}
-                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm flex items-center justify-center">−</button>
-              <span className="text-sm w-6 text-center">{item.qty}</span>
-              <button onClick={() => updateQty(item.product_id, item.qty + 1)}
-                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 text-sm flex items-center justify-center">+</button>
-            </div>
-            <button onClick={() => removeItem(item.product_id)}
-              className="text-gray-300 hover:text-red-400 text-xl leading-none">×</button>
-          </div>
-        ))}
+  // ✅ แสดง BillModal หลังชำระเงินสำเร็จ พร้อมชื่อร้านจาก session
+  if (billDone) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <BillModal
+          bill={{
+            saleId: billDone.saleId,
+            shopName: session?.user?.name ?? 'ร้านค้า',
+            items: billDone.items ?? [],
+            total: billDone.total,
+            payment_method: billDone.payment_method,
+            received: billDone.received,
+            change: billDone.change,
+          }}
+          onClose={() => setBillDone(null)}
+        />
       </div>
+    );
+  }
 
-      <div className="p-4 border-t border-gray-100 space-y-3">
-        <div className="flex justify-between text-sm font-medium">
-          <span>ยอดรวม</span>
-          <span className="text-teal-600 text-lg">฿{total().toLocaleString()}</span>
-        </div>
-        <div className="flex gap-2">
-          {(['cash', 'transfer'] as const).map(m => (
-            <button key={m} onClick={() => setPayMethod(m)}
-              className={`flex-1 py-2 rounded-lg text-sm border transition ${
-                payMethod === m ? 'bg-teal-600 text-white border-teal-600' : 'border-gray-200 text-gray-500 hover:border-teal-400'
-              }`}>
-              {m === 'cash' ? '💵 เงินสด' : '📲 โอนเงิน'}
-            </button>
-          ))}
-        </div>
-        {payMethod === 'cash' && (
-            <div>
-              <input type="number" placeholder="รับมา..." value={received}
-                onChange={e => setReceived(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
-              {change !== null && change >= 0 && <p className="text-sm text-teal-600 mt-1">เงินทอน ฿{change.toLocaleString()}</p>}
-              {change !== null && change < 0 && <p className="text-sm text-red-400 mt-1">รับมาไม่พอ</p>}
-            </div>
-          )}
-          <button onClick={handleCheckout}
-            disabled={items.length === 0 || loading || (payMethod === 'cash' && change !== null && change < 0)}
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white rounded-xl py-3 font-medium transition disabled:opacity-40">
-            {loading ? 'กำลังบันทึก...' : 'ชำระเงิน'}
-          </button>
-          {items.length > 0 && (
-            <button onClick={clearCart} className="w-full text-sm text-gray-400 hover:text-red-400 transition">ล้างตะกร้า</button>
-        )}
-      </div>
-    </>
-  );
+  const cartPanelProps = {
+    items, total, payMethod, setPayMethod,
+    received, setReceived, change,
+    handleCheckout, loading, clearCart,
+    removeItem, updateQty,
+  };
 
   return (
     <div className="flex h-full min-h-screen">
@@ -177,7 +208,7 @@ export default function SalesPage() {
         <div className="p-4 border-b border-gray-100">
           <h2 className="font-medium text-gray-700">ตะกร้า</h2>
         </div>
-        <CartPanel />
+        <CartPanel {...cartPanelProps} />
       </div>
 
       {/* ── Mobile: FAB button ── */}
@@ -207,7 +238,7 @@ export default function SalesPage() {
           <button onClick={() => setCartOpen(false)}
             className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
         </div>
-        <CartPanel />
+        <CartPanel {...cartPanelProps} />
       </div>
 
     </div>
