@@ -48,7 +48,7 @@ export default function BillModal({
     `);
     win.document.close();
   }
-
+ 
   async function handleDelete() {
     if (!confirm(`ลบบิล #${bill.saleId} ?`)) return;
     await fetch('/api/sales', {
@@ -109,7 +109,7 @@ export default function BillModal({
           <hr className="border-dashed border-gray-300 mt-3 mb-2" />
           <p className="text-center text-xs text-gray-400">ขอบคุณที่ใช้บริการ</p>
         </div>
-
+        
         <div className="flex gap-2 px-5 pb-5 pt-2 border-t border-gray-100">
           <button onClick={handlePrint}
             className="flex-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg py-2.5 text-sm font-medium transition">
