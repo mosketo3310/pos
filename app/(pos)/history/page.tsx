@@ -24,29 +24,37 @@ export default function HistoryPage() {
   useEffect(() => { load(); }, []);
 
   async function openBill(sale: Sale) {
-    const res = await fetch(`/api/sales?id=${sale.id}`);
-    const data = await res.json();
-    setBill({
-      saleId: data.id,
-      shopName: session?.user?.name ?? 'ร้านค้า',
-      items: data.items,
-      total: data.total,
-      payment_method: data.payment_method,
-      received: data.received,
-      change: data.change,
-      created_at: data.created_at,
-    });
-  }
+  const res = await fetch(`/api/sales?id=${sale.id}`);
+  const data = await res.json();
+  setBill({
+    saleId: data.id,
+    shopName: session?.user?.name ?? 'ร้านค้า',
+    items: data.items,
+    total: data.total,
+    payment_method: data.payment_method,
+    received: data.received,
+    change: data.change,
+    created_at: data.created_at,
+  });
+}
 
   return (
     <div className="p-6">
       {bill && (
-        <BillModal
-          bill={bill}
-          onClose={() => setBill(null)}
-          onDelete={() => { setBill(null); load(); }}
-        />
-      )}
+  <BillModal
+    bill={bill}
+    onClose={() => setBill(null)}
+    onDelete={async () => {
+      await fetch('/api/sales', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: bill.saleId }),
+      });
+      setBill(null);
+      load();
+    }}
+  />
+)}
 
       <h1 className="text-xl font-medium text-gray-700 mb-6">ประวัติบิล</h1>
       {loading && <p className="text-gray-400 text-sm">กำลังโหลด...</p>}

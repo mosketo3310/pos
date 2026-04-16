@@ -50,15 +50,10 @@ export default function BillModal({
   }
  
   async function handleDelete() {
-    if (!confirm(`ลบบิล #${bill.saleId} ?`)) return;
-    await fetch('/api/sales', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: bill.saleId }),
-    });
-    onDelete?.();
-    onClose();
-  }
+  if (!confirm(`ลบบิล #${bill.saleId} ?`)) return;
+  onDelete?.();
+  onClose();
+}
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">

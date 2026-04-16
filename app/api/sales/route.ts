@@ -6,30 +6,55 @@ import db, { initDB } from '@/lib/db';
 export async function POST(req: NextRequest) {
   await initDB();
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { items, payment_method, received } = await req.json();
-  const total = items.reduce((sum: number, i: any) => sum + i.price * i.qty, 0);
-  const change = payment_method === 'cash' ? received - total : null;
+  
+  // ป้องกัน items เป็น undefined
+  const safeItems = items || [];
+  const total = safeItems.reduce((sum: number, i: any) => sum + (i.price * i.qty), 0);
+  const change = payment_method === 'cash' ? (received - total) : null;
 
-  const saleResult = await db.execute({
-    sql: 'INSERT INTO sales (user_id, total, payment_method, received, change) VALUES (?,?,?,?,?)',
-    args: [session.user.id, total, payment_method, received ?? null, change],
-  });
-  const saleId = Number(saleResult.lastInsertRowid);
+  try {
+    // ใช้ RETURNING id เพื่อให้ได้ ID ที่แน่นอนจาก Database
+    const saleResult = await db.execute({
+      sql: 'INSERT INTO sales (user_id, total, payment_method, received, change) VALUES (?,?,?,?,?) RETURNING id',
+      args: [(session.user as any).id, total, payment_method, received ?? null, change],
+    });
+    
+    const saleId = saleResult.rows[0]?.id;
 
-  for (const item of items) {
-    await db.execute({
-      sql: 'INSERT INTO sale_items (sale_id, product_id, name, price, qty) VALUES (?,?,?,?,?)',
-      args: [saleId, item.product_id, item.name, item.price, item.qty],
+    if (!saleId) throw new Error("Failed to get Sale ID");
+
+    // ใช้ for...of ปกติ แต่เช็คความปลอดภัยข้อมูล
+    for (const item of safeItems) {
+      await db.execute({
+        sql: 'INSERT INTO sale_items (sale_id, product_id, name, price, qty) VALUES (?,?,?,?,?)',
+        args: [saleId, item.product_id, item.name, item.price, item.qty],
+      });
+      await db.execute({
+        sql: 'UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?',
+        args: [item.qty, item.product_id, (session.user as any).id],
+      });
+    }
+
+    return NextResponse.json({
+      saleId,
+      total,
+      payment_method,
+      received: received ?? null,
+      change,
+      shopName: (session.user as any).shopName ?? session.user.name ?? 'ร้านค้า',
+      items: safeItems.map((i: any) => ({
+        name: i.name,
+        qty: i.qty,
+        price: i.price,
+      })),
     });
-    await db.execute({
-      sql: 'UPDATE products SET stock = stock - ? WHERE id = ? AND user_id = ?',
-      args: [item.qty, item.product_id, session.user.id],
-    });
+  } catch (error: any) {
+    console.error("SALE_ERROR:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  return NextResponse.json({ saleId, total, change });
 }
 
 export async function GET(req: NextRequest) {

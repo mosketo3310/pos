@@ -105,9 +105,9 @@ export default function ProductsPage() {
   }
 
   const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase()) &&
-    (filterCat === '' || String(p.category_id) === filterCat)
-  );
+  p.name.toLowerCase().includes(search.toLowerCase()) ||
+  (p.barcode ?? '').toLowerCase().includes(search.toLowerCase())
+);
 
   return (
     <div className="p-4 md:p-6">

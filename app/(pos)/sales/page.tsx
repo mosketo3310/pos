@@ -118,8 +118,9 @@ export default function SalesPage() {
   }, []);
 
   const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  p.name.toLowerCase().includes(search.toLowerCase()) ||
+  (p.barcode ?? '').toLowerCase().includes(search.toLowerCase())
+);
 
   async function handleCheckout() {
     if (items.length === 0) return;
@@ -153,7 +154,7 @@ export default function SalesPage() {
           bill={{
             saleId: billDone.saleId,
             shopName:billDone.shopName ,
-            items: billDone.items_summary ,
+            items: billDone.items ?? [],
             total: billDone.total,
             payment_method: billDone.payment_method,
             received: billDone.received,
