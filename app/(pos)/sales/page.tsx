@@ -148,23 +148,23 @@ export default function SalesPage() {
 
   // ✅ แสดง BillModal หลังชำระเงินสำเร็จ พร้อมชื่อร้านจาก session
   if (billDone) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <BillModal
-          bill={{
-            saleId: billDone.saleId,
-            shopName:billDone.shopName ,
-            items: billDone.items ?? [],
-            total: billDone.total,
-            payment_method: billDone.payment_method,
-            received: billDone.received,
-            change: billDone.change,
-          }}
-          onClose={() => setBillDone(null)}
-        />
-      </div>
-    );
-  }
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <BillModal
+        bill={{
+          saleId: billDone?.saleId,
+          shopName: billDone?.shopName || 'ร้านค้า', // ถ้าไม่มีชื่อร้าน ให้ใช้คำว่า 'ร้านค้า' แทน
+          items: billDone?.items ?? [],
+          total: billDone?.total ?? 0,
+          payment_method: billDone?.payment_method ?? 'cash',
+          received: billDone?.received ?? 0,
+          change: billDone?.change ?? 0,
+        }}
+        onClose={() => setBillDone(null)}
+      />
+    </div>
+  );
+}
 
   const cartPanelProps = {
     items, total, payMethod, setPayMethod,
